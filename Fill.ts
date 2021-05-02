@@ -1,5 +1,5 @@
 //Fill类，负责信息整理
-type RequestMethod = "GET"|"POST"|"POSTJSON"|"DOWNLOAD";
+type RequestMethod = "GET" | "POST" | "POSTJSON" | "DOWNLOAD";
 
 type OnError = (code: number) => void;
 type OnLoad = (data: Response | string) => void;
@@ -9,25 +9,25 @@ type OnFillError = (error: Error) => void;
 type AsFunc = (source: string) => any;
 
 type MetaData = {
-    url?: string,
-    method?: RequestMethod,
-    headers?: Headers,
-    data?: FormData,
-    listeners?: {
-        as?: Array<AsFunc>,
-        onError?: OnError,
-        onLoad?: OnLoad,
-        onProgress?: OnProgress,
-        onTimeout?: OnVoid,
-        onFillError?: OnFillError;
+    url ? : string,
+    method ? : RequestMethod,
+    headers ? : Headers,
+    data ? : FormData,
+    listeners ? : {
+        as ? : Array < AsFunc > ,
+        onError ? : OnError,
+        onLoad ? : OnLoad,
+        onProgress ? : OnProgress,
+        onTimeout ? : OnVoid,
+        onFillError ? : OnFillError;
         //暂未实现
         // onStart?: OnProgress,
         // onFinish?: OnProgress,
         // onAbort?: OnProgress
     }
-    settings?: {
-        timeout?: number,
-        mimeType?: string
+    settings ? : {
+        timeout ? : number,
+        mimeType ? : string
     }
 };
 
@@ -55,18 +55,18 @@ type MetaData = {
 // }
 
 
-class Fill {
+export default class Fill {
 
     private metaData: MetaData = {}
     public constructor(url: string, method: RequestMethod) {
         this.metaData.method = method;
         this.metaData.data = new FormData();
         this.metaData.headers = new Headers();
-        this.metaData.listeners = {as : []};
+        this.metaData.listeners = { as: [] };
         this.metaData.settings = {};
         this.metaData.url = url;
     }
-    
+
     //请求方法，并生成Fill实例
     public static get(url: string): Fill {
         return new Fill(url, "GET");
@@ -88,8 +88,9 @@ class Fill {
     }
 
     public addParam = this.add;
-    
-    public addParams(values: {[propName: string]: string}): Fill {
+
+    public addParams(values: {
+        [propName: string]: string }): Fill {
         Object.keys(values).forEach((value: string) => this.add(value, values[value]));
         return this;
     }
@@ -154,13 +155,13 @@ class Fill {
     }
 
     //将元数据转换为请求
-    public request():XMLHttpRequest {
+    public request(): XMLHttpRequest {
         try {
             return FillRequest.request(this.metaData);
         } catch (error) {
-            this.metaData.listeners.onFillError?.(error);
+            this.metaData.listeners.onFillError ?.(error);
         }
-        
+
     }
 
 }
@@ -170,9 +171,9 @@ class FillRequest {
 
     //返回已经open但没send的xhr
     static request(metaData: MetaData): XMLHttpRequest {
-        let url: string, data: string|FormData;
+        let url: string, data: string | FormData;
         //根据不同method，获取不同类型值
-        switch(metaData.method) {
+        switch (metaData.method) {
             case "GET":
                 url = this.GetDataParsed(metaData.url, metaData.data);
                 data = metaData.data;
@@ -193,33 +194,34 @@ class FillRequest {
         xhr.open(metaData.method, url, true);
         //设置请求头
         metaData.headers.forEach((value, key) => xhr.setRequestHeader(key, value))
-        //设置元信息
+            //设置元信息
         if (metaData.settings.timeout) xhr.timeout = metaData.settings.timeout;
         if (metaData.settings.mimeType) xhr.overrideMimeType(metaData.settings.mimeType);
         //设置监听
         if (metaData.listeners.onTimeout) xhr.ontimeout = metaData.listeners.onTimeout;
+        if(metaData.listeners.onProgress) xhr.onprogress = metaData.listeners.onProgress;
         xhr.onload = (ev) => {
-            let status = xhr.status;
-            if ((status >= 200 && status <= 300) || status == 304) {
-                //请求成功
-                //执行as方法
-                let result: Response | string = xhr.response;
-                if (metaData.listeners.as && metaData.listeners.as.length != 0) {
-                    let lastReturn = xhr.responseText;
-                    metaData.listeners.as.forEach(
-                        (value) => {
-                            lastReturn = value(lastReturn);
-                        }
-                    );
-                    result = lastReturn ? lastReturn : result;
+                let status = xhr.status;
+                if ((status >= 200 && status <= 300) || status == 304) {
+                    //请求成功
+                    //执行as方法
+                    let result: Response | string = xhr.response;
+                    if (metaData.listeners.as && metaData.listeners.as.length != 0) {
+                        let lastReturn = xhr.responseText;
+                        metaData.listeners.as.forEach(
+                            (value) => {
+                                lastReturn = value(lastReturn);
+                            }
+                        );
+                        result = lastReturn ? lastReturn : result;
+                    }
+                    metaData.listeners.onLoad ?.(result);
+                    return;
                 }
-                metaData.listeners.onLoad?.(result);
-                return;
+                metaData.listeners.onError ?.(status);
             }
-            metaData.listeners.onError?.(status);
-        }
-        //根据不同method，请求
-        switch(metaData.method) {
+            //根据不同method，请求
+        switch (metaData.method) {
             case "GET":
                 xhr.send(null);
                 break;
@@ -244,14 +246,10 @@ class FillRequest {
     }
 
     private static JsonDataParsed(data: FormData): string {
-        let objData: {[propName: string]: string} = {};
+        let objData: {
+            [propName: string]: string } = {};
         data.forEach((value, key) => objData[key] = value.toString());
         return JSON.stringify(objData);
     }
 
 }
-
-Fill.get("http://127.0.0.1:8080")
-    .add("name", "hhh")
-    .onLoad((data: Response) => console.log(data))
-    .request();
